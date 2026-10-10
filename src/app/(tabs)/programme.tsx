@@ -18,6 +18,7 @@ export default function Programme() {
   const completions = useApp((s) => s.completions);
   const done = Object.keys(completions).length;
   const next = nextProgramDay(completions, PROGRAM_LENGTH);
+  const activity = useApp((s) => s.profile.activityProfile);
 
   return (
     <Screen>
@@ -32,6 +33,15 @@ export default function Programme() {
         </View>
         <WaveProgress value={done / PROGRAM_LENGTH} />
       </Card>
+
+      {activity ? (
+        <Card tone="mint" style={{ marginTop: space.md }}>
+          <Txt variant="caption" color={colors.teal}>
+            🎯 {t.focus.title}
+          </Txt>
+          <Txt variant="small">{t.focus[activity]}</Txt>
+        </Card>
+      ) : null}
 
       {[0, 1, 2].map((week) => (
         <Section key={week} title={`${fmt(t.program.week, { n: week + 1 })} · ${t.program.weekThemes[week]}`}>

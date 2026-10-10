@@ -1,6 +1,6 @@
 {
   "name": "plushup",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "main": "expo-router/entry",
   "private": true,
   "scripts": {
@@ -12,7 +12,8 @@
     "test": "vitest run",
     "build:web": "expo export --platform web",
     "check": "npm run typecheck && npm test && npm run build:web",
-    "e2e": "npm run build:web && node tests/e2e/run.mjs"
+    "e2e": "npm run build:web && node tests/e2e/run.mjs",
+    "demo": "npm run build:web && node scripts/serve.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",

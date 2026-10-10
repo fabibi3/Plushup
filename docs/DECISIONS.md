@@ -54,6 +54,18 @@ Format : **Décision** · pourquoi · ce que j'ai rejeté · ce qui me ferait ch
 
 ---
 
+## D11. Mode démo déterministe, isolé du cloud
+- **Pourquoi** : une démo d'investisseurs ne doit dépendre ni du réseau ni du hasard. Données générées par un PRNG à graine fixe, **testées** (série de 6 jours, aucun badge en attente, célébration « 7 jours » au check-in, tendance à la baisse). Bandeau « Mode démo » toujours visible ; la synchro et la session anonyme sont désactivées.
+
+## D12. Badges calculés, pas stockés
+- Les badges sont dérivés des données (impossible de les désynchroniser) ; seule la liste des badges **déjà célébrés** est persistée. Célébration uniquement sur les onglets (jamais par-dessus un écran de saisie).
+
+## D13. Réachat = lien panier Shopify, parrainage = UTM
+- Lien `/cart/<variant>:1` vers la **vraie** variante (vérifiée via l'API Shopify) : zéro intégration de paiement, paiement à la livraison géré par la boutique. Parrainage suivi par `utm_campaign=<code>` (visible dans Shopify Analytics) plutôt que des codes promo à gérer : on mesure d'abord, on récompense ensuite.
+
+## D14. Liaison de commande par téléphone, vérifiée côté serveur
+- En paiement à la livraison, le téléphone est l'identifiant fiable (pas l'e-mail). Comparaison sur les 9 derniers chiffres (06…, +212…, 00212…). Même message d'erreur pour « introuvable » et « mauvais téléphone » (pas de fuite d'information). Jeton Shopify en lecture seule, uniquement côté serveur.
+
 ## Ce que la V0 ne fait volontairement PAS (et pourquoi)
 
 | Pas fait | Pourquoi | Quand |

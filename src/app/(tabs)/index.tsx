@@ -3,7 +3,9 @@ import { Link, router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { DemoBanner } from '@/components/DemoBanner';
 import { Icon } from '@/components/Icon';
+import { ProductImage } from '@/components/ProductImage';
 import { Txt } from '@/components/Txt';
 import { WaveBand, WaveMark } from '@/components/Wave';
 import { Button, Card, Screen } from '@/components/ui';
@@ -27,6 +29,7 @@ export default function Today() {
   const logs = useApp((s) => s.logs);
   const completions = useApp((s) => s.completions);
   const addWater = useApp((s) => s.addWater);
+  const linkedOrder = useApp((s) => s.linkedOrder);
 
   const log = logs[today];
   const checked = hasCheckin(log);
@@ -48,6 +51,10 @@ export default function Today() {
   // Routine faite aujourd'hui → on montre CELLE-CI (« La refaire ») ; sinon la prochaine à faire.
   const program = todayDay ? getDay(todayDay) : nextDay ? getDay(nextDay) : undefined;
   const activeCount = week.filter((d) => d.active).length;
+  const routinesDone = Object.keys(completions).length;
+  // Le bilan apparaît dès qu'il y a de quoi raconter ; la carte commerce une fois l'habitude installée.
+  const showWeekly = Object.keys(logs).length >= 3;
+  const showOrder = linkedOrder != null || routinesDone >= 7;
 
   const onWater = () => {
     addWater(today, 1);
@@ -69,6 +76,7 @@ export default function Today() {
         </View>
         <WaveMark size={44} />
       </View>
+      <DemoBanner />
 
       {/* Série + semaine */}
       <Card tone="deep" style={{ marginTop: space.lg, paddingBottom: 0, overflow: 'hidden' }}>
@@ -183,6 +191,38 @@ export default function Today() {
           </Link>
         ) : null}
       </Card>
+
+      {/* Bilan de la semaine */}
+      {showWeekly ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/bilan')} style={{ marginTop: space.lg }}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+            <Txt style={{ fontSize: 28, lineHeight: 36 }}>📊</Txt>
+            <View style={{ flex: 1 }}>
+              <Txt weight="semibold">{t.weekly.cardTitle}</Txt>
+              <Txt variant="small" color={colors.muted}>
+                {fmt(t.today.weekActive, { n: activeCount })}
+              </Txt>
+            </View>
+            <Icon name="chevron" size={18} color={colors.muted} />
+          </Card>
+        </Pressable>
+      ) : null}
+
+      {/* Commerce : réachat au bon moment */}
+      {showOrder ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/commande')} style={{ marginTop: space.lg }}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+            <ProductImage size={56} />
+            <View style={{ flex: 1 }}>
+              <Txt weight="semibold">{t.order.reorderTitle}</Txt>
+              <Txt variant="small" color={colors.muted} numberOfLines={2}>
+                {t.order.reorderBody}
+              </Txt>
+            </View>
+            <Icon name="chevron" size={18} color={colors.muted} />
+          </Card>
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }

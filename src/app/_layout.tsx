@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { WebFrame } from '@/components/WebFrame';
 import { initAuth, requestSync } from '@/lib/cloud';
 import { applyDirection } from '@/lib/direction';
 import { useApp } from '@/store/useApp';
@@ -61,24 +62,28 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.cream }, animation: 'slide_from_right' }}>
-        <Stack.Protected guard={!onboarded}>
-          <Stack.Screen name="onboarding" />
-        </Stack.Protected>
-        <Stack.Protected guard={onboarded}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="checkin" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-          <Stack.Screen name="routine/[day]" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="fiche/[slug]" />
-          <Stack.Screen name="profil" />
-          <Stack.Screen name="mesures" />
-          <Stack.Screen name="commande" />
-          <Stack.Screen name="compte" />
-          <Stack.Screen name="donnees" />
-        </Stack.Protected>
-        {/* Toujours accessible (lien depuis l'onboarding). */}
-        <Stack.Screen name="securite" />
-      </Stack>
+      <WebFrame>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.cream }, animation: 'slide_from_right' }}>
+          <Stack.Protected guard={!onboarded}>
+            <Stack.Screen name="onboarding" />
+          </Stack.Protected>
+          <Stack.Protected guard={onboarded}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="checkin" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="routine/[day]" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="fiche/[slug]" />
+            <Stack.Screen name="profil" />
+            <Stack.Screen name="mesures" />
+            <Stack.Screen name="commande" />
+            <Stack.Screen name="lier-commande" />
+            <Stack.Screen name="bilan" />
+            <Stack.Screen name="compte" />
+            <Stack.Screen name="donnees" />
+          </Stack.Protected>
+          {/* Toujours accessible (lien depuis l'onboarding). */}
+          <Stack.Screen name="securite" />
+        </Stack>
+      </WebFrame>
     </SafeAreaProvider>
   );
 }

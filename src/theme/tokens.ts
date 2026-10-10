@@ -15,8 +15,10 @@ export const colors = {
   ink: '#0F4648',
   muted: '#4E6E6E',
   line: '#D9E3DF',
-  // « Jour lourd » : ambre doux plutôt que rouge (pas de culpabilisation).
-  amber: '#E8C48A',
+  // Échelle de ressenti : sable (moyen) → ambre (lourd), jamais de rouge (pas de culpabilisation).
+  // Texte sur ambre : toujours `ink` (5,2:1) ; amberInk seulement sur sandWarm (5,5:1).
+  sandWarm: '#F2E3BD',
+  amber: '#E3A95C',
   amberInk: '#7A4E0E',
   // Réservé à la page sécurité (signaux d'alerte).
   alert: '#9F2A22',

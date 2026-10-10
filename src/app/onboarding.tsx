@@ -11,6 +11,8 @@ import { Button, Card, Chip, ChipRow, Field, Header, Screen } from '@/components
 import { fmt, useT } from '@/i18n';
 import { ensureAnonymousSession } from '@/lib/cloud';
 import { REMINDER_TIMES } from '@/lib/constants';
+import { todayKey } from '@/lib/dates';
+import { generateDemoData } from '@/lib/demo';
 import { scheduleDailyReminder } from '@/lib/reminders';
 import type { ActivityProfile, Goal, LeggingSize } from '@/lib/types';
 import { useApp } from '@/store/useApp';
@@ -24,6 +26,7 @@ const STEPS = 7;
 export default function Onboarding() {
   const t = useT();
   const completeOnboarding = useApp((s) => s.completeOnboarding);
+  const startDemo = useApp((s) => s.startDemo);
   const [step, setStep] = useState(0);
   const [firstName, setFirstName] = useState('');
   const [activity, setActivity] = useState<ActivityProfile | null>(null);
@@ -48,6 +51,12 @@ export default function Onboarding() {
 
   const isLast = step === STEPS - 1;
 
+  // Profil exemple (pitch, salons, tests) : 3 semaines d'historique, jamais synchronisé.
+  const openDemo = () => {
+    startDemo(generateDemoData(todayKey()));
+    router.replace('/');
+  };
+
   const footer = (
     <View style={{ gap: space.sm }}>
       {isLast ? (
@@ -55,6 +64,7 @@ export default function Onboarding() {
       ) : (
         <Button label={step === 0 ? t.common.start : t.common.continue} onPress={next} />
       )}
+      {step === 0 ? <Button label={t.demo.cta} variant="ghost" small onPress={openDemo} /> : null}
       {step > 0 ? (
         <Txt variant="caption" color={colors.muted} center>
           {fmt(t.onboarding.step, { n: step, total: STEPS - 1 })}

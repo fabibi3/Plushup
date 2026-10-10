@@ -45,7 +45,7 @@ const isNetworkError = (e: unknown) => {
 };
 
 async function run(): Promise<SyncResult> {
-  if (!supabase) return 'disabled';
+  if (!supabase || useApp.getState().demo) return 'disabled'; // la démo ne touche jamais la base
   const { data: sessionData } = await supabase.auth.getSession();
   const userId = sessionData.session?.user.id;
   if (!userId) return 'no-session';
@@ -100,15 +100,31 @@ async function run(): Promise<SyncResult> {
 
     // ---------- PULL ----------
     const since = useApp.getState().lastPulledAt ?? '1970-01-01T00:00:00Z';
-    const [logsRes, measuresRes, progressRes, profileRes] = await Promise.all([
+    const [logsRes, measuresRes, progressRes, profileRes, orderRes] = await Promise.all([
       supabase.from('daily_logs').select('*').gt('updated_at', since).order('updated_at').limit(1000),
       supabase.from('measurements').select('*').gt('updated_at', since).order('updated_at').limit(1000),
       supabase.from('program_progress').select('day_index, completed_at').eq('program_slug', PROGRAM_SLUG),
       useApp.getState().profile.onboardedAt == null
         ? supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from('linked_orders')
+        .select('order_name, purchased_at, delivered_at, legging_size, status')
+        .order('purchased_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
-    for (const res of [logsRes, measuresRes, progressRes, profileRes]) if (res.error) throw res.error;
+    for (const res of [logsRes, measuresRes, progressRes, profileRes, orderRes]) if (res.error) throw res.error;
+    if (orderRes.data) {
+      const o = orderRes.data;
+      useApp.getState().setLinkedOrder({
+        orderName: o.order_name,
+        purchasedAt: o.purchased_at ?? new Date().toISOString(),
+        deliveredAt: o.delivered_at,
+        size: o.legging_size,
+        status: o.status as 'pending' | 'delivered' | 'cancelled' | 'refunded',
+      });
+    }
 
     const logRows = logsRes.data ?? [];
     const measureRows = measuresRes.data ?? [];

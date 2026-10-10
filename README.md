@@ -1,4 +1,4 @@
-# PlushUp — app compagnon « jambes légères » (V0)
+# PlushUp — app compagnon « jambes légères » (v1.0)
 
 Une seule base de code **Expo (React Native + react-native-web)** → webapp (`app.plushup.co`) + iOS + Android.
 Local-first, bilingue **FR / AR (RTL)**, adossée à **Supabase** (projet `plushup-v0`, région Paris).
@@ -17,6 +17,9 @@ npm run web                   # → http://localhost:8081
 
 Sur téléphone : `npm start`, puis scanne le QR code avec **Expo Go** (iOS/Android, même Wi-Fi).
 
+**Pitch / démo** : `npm run demo` → http://localhost:8080 (build de prod, hors ligne, cadre téléphone sur grand écran),
+puis « Découvrir avec un profil exemple ». Déroulé complet : **[docs/DEMO.md](docs/DEMO.md)**.
+
 > Sans `.env`, l'app fonctionne quand même à 100 % en **mode local** (pas de sauvegarde en ligne).
 
 ### Scripts
@@ -30,6 +33,7 @@ Sur téléphone : `npm start`, puis scanne le QR code avec **Expo Go** (iOS/Andr
 | `npm run build:web` | Build web de prod dans `dist/` |
 | `npm run check` | Les trois ci-dessus d'un coup |
 | `npm run e2e` | Parcours complet dans Chromium (voir § 6) |
+| `npm run demo` | Build web + serveur local hors ligne pour présenter l'app |
 
 ---
 
@@ -48,9 +52,16 @@ Projet : https://supabase.com/dashboard/project/fjbrqsofnruqmqdprert
 
 Ces réglages ne sont pas modifiables en SQL ni via le MCP, d'où cette étape manuelle.
 
+### Activer la liaison des commandes Shopify (5 min)
+1. Shopify Admin → Paramètres → Applications → **Développer des applications** → créer « PlushUp App ».
+2. Scopes Admin API : **`read_orders`, `read_customers`** (lecture seule). Installer → copier le jeton Admin API.
+3. Supabase → Edge Functions → **Secrets** : `SHOPIFY_SHOP_DOMAIN=dbrwmy-5q.myshopify.com` et `SHOPIFY_ADMIN_TOKEN=<jeton>`.
+4. C'est tout : l'écran « Lier ma commande » vérifie numéro + téléphone directement dans Shopify.
+   (Requête GraphQL validée contre le schéma Admin ; sans secrets, l'app affiche « bientôt disponible ».)
+
 ---
 
-## 3. Ce que fait la V0
+## 3. Ce que fait l'app
 
 | Écran | Contenu |
 |---|---|
@@ -61,6 +72,12 @@ Ces réglages ne sont pas modifiables en SQL ni via le MCP, d'où cette étape m
 | **Lecteur de routine** | Minuterie sans dérive, pulsation visuelle + **vibration douce** au rythme du geste, écran maintenu allumé |
 | **Progrès** | Calendrier 4 semaines, chiffres clés, tendance, **observations personnelles** (descriptives, jamais causales) |
 | **Moi** | Profil, rappel quotidien (notification locale), langue, Ma commande (guide des tailles, enfilage, entretien, réachat), compte, données, sécurité |
+| **Mode démo** | Profil exemple (Salma, 3 semaines d'historique déterministe), bandeau visible, jamais synchronisé |
+| **Badges & célébrations** | 10 étapes (série, programme, hydratation…), célébration animée + partage WhatsApp |
+| **Bilan de la semaine** | Jours actifs, routines, eau, sensation vs semaine d'avant, jour le plus léger, partage |
+| **Ma commande** | Commande liée, **réachat en un geste vers le vrai panier Shopify** (paiement à la livraison), avis au bon moment, parrainage WhatsApp tracé (UTM) |
+| **Lier ma commande** | N° de commande + téléphone → vérifié côté serveur dans Shopify (Edge Function `link-order`) |
+| **Web grand écran** | Cadre de téléphone + positionnement de marque (présentation sur ordinateur/projecteur) |
 | **Mes données** | Export JSON + **suppression du compte** (exigence App Store / Play / loi 09-08 / RGPD) |
 | **Sécurité** | Signaux d'alerte (consulter en urgence), précautions, bon usage |
 
@@ -117,7 +134,7 @@ Tap utilisatrice ──► store local (instantané, persistant, marqué dirty)
 | `daily_logs` | Check-in quotidien, unique (user, date), LWW |
 | `measurements` | Mensurations facultatives, unique (user, date, zone), LWW |
 | `program_progress` | Jours de programme terminés |
-| `linked_orders` | **Prête pour Shopify** : lecture seule côté app, écrite par le serveur |
+| `linked_orders` | Commandes Shopify liées : lecture seule côté app, écrite par l'Edge Function `link-order` |
 
 RLS sur toutes les tables (`user_id = auth.uid()`), testée : une utilisatrice ne voit ni ne modifie rien d'une autre.
 Advisors sécurité Supabase : **0 alerte**.
@@ -134,27 +151,29 @@ Charte des formulations santé : **[docs/WORDING.md](docs/WORDING.md)**.
 ## 6. Qualité
 
 - `npm run typecheck` : TypeScript strict + `noUncheckedIndexedAccess`, schéma DB typé (une colonne inexistante = erreur de compilation).
-- `npm test` : 24 tests (dates locales/DST, série, observations, fusion de synchro…).
-- `npm run e2e` : parcours complet sur la build web en viewport mobile (onboarding → consentement obligatoire →
-  check-in → hydratation → routine → série → programme → progrès → persistance après rechargement →
-  arabe RTL → suppression des données). Nécessite Chromium : `npx playwright install chromium`
+- `npm test` : 32 tests (dates locales/DST, série, observations, fusion de synchro, badges, bilan, mise en scène de la démo…).
+- `npm run e2e` : 20 étapes sur la build web en viewport mobile — parcours réel (onboarding → consentement
+  obligatoire → check-in → célébrations → routine → série → programme → progrès → persistance → arabe RTL →
+  suppression) **et scénario de pitch** (démo → check-in → « 7 jours d'affilée » → bilan → commande → badges). Nécessite Chromium : `npx playwright install chromium`
   ou `CHROMIUM_PATH=/chemin/vers/chrome`.
 - Bundles natifs iOS/Android vérifiés (`npx expo export --platform ios --platform android`).
 
 ### Poids (web, gzip)
 | | |
 |---|---|
-| Bundle initial | ~358 Ko |
-| Chunk cloud (chargé après le 1er affichage) | ~39 Ko |
+| Bundle initial | ~367 Ko |
+| Chunk cloud (chargé après le 1er affichage) | ~40 Ko |
 | Polices | Poppins ×3 graisses ; Readex Pro (arabe) chargée **uniquement** si l'arabe est choisi |
 
 ---
 
-## 7. Limites connues de la V0 (assumées)
+## 7. Limites connues (assumées)
 
 - **Rappels** : notifications locales sur mobile uniquement. Web Push = MVP (service worker + envoi serveur).
 - **Expo Go** : suffisant pour tester la V0. Dès qu'on ajoute HealthKit / Health Connect → *development build* (EAS).
 - **Arabe** : traduit en arabe standard simple → **relecture native obligatoire** ; darija pour l'audio des routines.
 - **Contenu** (exercices, fiches, guide des tailles) : à valider par un·e kiné et à remplacer par le vrai tableau de tailles.
-- **Lien Shopify** : table prête, intégration (Edge Function + webhooks) au MVP.
+- **Lien Shopify** : Edge Function déployée, il ne manque que le jeton Admin (voir § 2). Webhooks de livraison : prochaine étape.
+- **Boutique** : le produit Shopify n'a qu'une variante (pas de tailles) et un stock à 0 — à configurer avant lancement.
+- **Avis** : le bouton ouvre la fiche produit (`#reviews`) ; brancher l'app d'avis Shopify (Judge.me, Loox…).
 - Numéro WhatsApp du service client à renseigner dans `src/lib/constants.ts`.

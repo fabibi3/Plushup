@@ -5,7 +5,8 @@ import { View } from 'react-native';
 
 import { Txt } from '@/components/Txt';
 import { Button, Card, Screen, Section } from '@/components/ui';
-import { fmt, useT } from '@/i18n';
+import { earnedMilestones, MILESTONE_EMOJI, MILESTONES } from '@/lib/milestones';
+import { fmt, num, useT } from '@/i18n';
 import { addDays, diffDays, fromKey, lastNDays, weekKeys } from '@/lib/dates';
 import {
   averageHeaviness,
@@ -23,10 +24,11 @@ import { useToday } from '@/lib/useToday';
 import { useApp } from '@/store/useApp';
 import { colors, radius, space } from '@/theme/tokens';
 
+// Échelle lisible d'un coup d'œil : menthe (léger) → sable (moyen) → ambre (lourd). Jamais de rouge.
 const CELL_COLORS: Record<CellLevel, string> = {
   none: colors.white,
   light: colors.mint,
-  medium: colors.sage,
+  medium: colors.sandWarm,
   heavy: colors.amber,
 };
 
@@ -54,6 +56,7 @@ export default function Progres() {
       wear: wearInsight(logs),
       routine: routineInsight(logs, completions),
       missing: checkinsUntilInsight(logs),
+      earned: earnedMilestones(logs, completions),
     };
   }, [logs, completions, today]);
 
@@ -95,7 +98,7 @@ export default function Progres() {
                     opacity: future ? 0.4 : 1,
                   }}
                 >
-                  <Txt variant="caption" color={level === 'heavy' ? colors.amberInk : colors.ink}>
+                  <Txt variant="caption" color={colors.ink}>
                     {fromKey(key).getDate()}
                   </Txt>
                   {data.routines.has(key) ? <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.deep, marginTop: 1 }} /> : null}
@@ -116,7 +119,7 @@ export default function Progres() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.lg }}>
         <Stat label={t.progress.daysTracked} value={`${data.tracked}/28`} />
         <Stat label={t.progress.routines} value={String(data.routinesDone)} />
-        <Stat label={t.progress.avgHeaviness} value={data.avgHeavy == null ? '–' : `${data.avgHeavy}/4`} />
+        <Stat label={t.progress.avgHeaviness} value={data.avgHeavy == null ? '–' : `${num(data.avgHeavy)}/4`} />
         <Stat label={t.progress.avgWorn} value={data.avgWorn == null ? '–' : fmt(t.checkin.hours, { n: data.avgWorn })} />
       </View>
       <Txt variant="small" color={colors.muted} style={{ marginTop: space.sm }}>
@@ -138,6 +141,41 @@ export default function Progres() {
             {t.progress.insightNote}
           </Txt>
         </Card>
+      </Section>
+
+      <Section title={t.milestones.title} action={<Txt variant="caption" color={colors.muted}>{data.earned.size}/{MILESTONES.length}</Txt>}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+          {MILESTONES.map((id) => {
+            const on = data.earned.has(id);
+            return (
+              <View
+                key={id}
+                accessibilityLabel={`${t.milestones.names[id]}${on ? '' : ` · ${t.milestones.locked}`}`}
+                style={{
+                  flexBasis: '30%',
+                  flexGrow: 1,
+                  alignItems: 'center',
+                  gap: space.xs,
+                  padding: space.md,
+                  borderRadius: radius.md,
+                  backgroundColor: on ? colors.white : 'transparent',
+                  borderWidth: 1,
+                  borderColor: on ? colors.mint : colors.line,
+                  borderStyle: on ? 'solid' : 'dashed',
+                }}
+              >
+                <Txt style={{ fontSize: 28, lineHeight: 36, opacity: on ? 1 : 0.25 }}>{MILESTONE_EMOJI[id]}</Txt>
+                <Txt variant="caption" center color={on ? colors.ink : colors.muted} numberOfLines={2}>
+                  {t.milestones.names[id]}
+                </Txt>
+              </View>
+            );
+          })}
+        </View>
+      </Section>
+
+      <Section title={t.weekly.title}>
+        <Button label={t.weekly.cardCta} variant="secondary" onPress={() => router.push('/bilan')} />
       </Section>
 
       <Section title={t.progress.measuresTitle}>

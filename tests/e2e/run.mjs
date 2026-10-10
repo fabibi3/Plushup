@@ -70,6 +70,9 @@ await click('L’après-midi');
 await page.getByRole('radio', { name: 'Confortable', exact: true }).click();
 await shot('06-checkin');
 await save.click();
+await page.getByText('Premier check-in').first().waitFor();
+step('célébration « Premier check-in »');
+await click('Continuer');
 await page.getByText('Check-in fait').waitFor();
 step('check-in enregistré');
 
@@ -87,6 +90,9 @@ await page.getByText('Routine terminée 🌊').waitFor();
 step('routine jour 1 terminée');
 await shot('09-routine-done');
 await click('Retour à l’accueil');
+await page.getByText('Première routine').first().waitFor();
+await click('Continuer');
+step('célébration « Première routine »');
 await page.getByText('Routine faite aujourd’hui').waitFor();
 await page.getByText('Série : 1 jour(s)').waitFor();
 step('série = 1 jour, routine marquée faite');
@@ -139,6 +145,65 @@ page.on('dialog', (d) => { dialogs.push(d.message()); void d.accept(); });
 await click('Supprimer mon compte et mes données');
 await page.getByText('Ta routine jambes légères').waitFor({ timeout: 15000 });
 step('suppression → retour onboarding · dialogues : ' + JSON.stringify(dialogs));
+
+
+// ---------------------------------------------------------------------------
+// Scénario PITCH : profil démo → check-in en direct → célébration « 7 jours d'affilée ».
+// ---------------------------------------------------------------------------
+{
+  const dctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'fr-FR' });
+  const p = await dctx.newPage();
+  p.on('pageerror', (e) => errors.push('pageerror(demo): ' + e.message));
+  const dshot = (n) => p.screenshot({ path: `${outDir}/${n}.png` });
+  const dclick = async (text) => { await p.getByText(text, { exact: true }).first().click(); await p.waitForTimeout(300); };
+  await p.goto(base, { waitUntil: 'networkidle' });
+  await dclick('Découvrir avec un profil exemple');
+  await p.getByText('Bonjour Salma').waitFor();
+  await p.getByText('Mode démo').waitFor();
+  await p.getByText('Série : 6 jour(s)').waitFor();
+  step('démo : profil Salma, série de 6 jours');
+  await p.waitForTimeout(600);
+  await dshot('20-demo-today');
+  await dclick('Faire mon check-in · 30 s');
+  await p.getByRole('radio', { name: 'Légères', exact: true }).click();
+  await dclick('6 h');
+  await dclick('L’après-midi');
+  await p.getByRole('button', { name: 'Enregistrer' }).click();
+  await p.getByText('7 jours d’affilée').first().waitFor();
+  await p.waitForTimeout(900);
+  await dshot('21-demo-celebration');
+  step('démo : check-in → célébration « 7 jours d’affilée »');
+  await dclick('Continuer');
+  await p.getByText('Série : 7 jour(s)').waitFor();
+  await p.mouse.wheel(0, 2000);
+  await p.waitForTimeout(400);
+  await dshot('22-demo-today-bottom');
+  await dclick('Ton bilan de la semaine');
+  await p.getByText('Sensation de lourdeur').waitFor();
+  await dshot('23-demo-bilan');
+  step('démo : bilan de la semaine');
+  await p.getByRole('button', { name: 'Retour' }).first().click();
+  await p.waitForTimeout(300);
+  await p.getByText('Une 2e paire pour la rotation').first().click();
+  await p.getByText('Commande #1042').waitFor();
+  await p.waitForTimeout(500);
+  await dshot('24-demo-commande');
+  step('démo : commande liée + réachat + parrainage');
+  await p.getByRole('button', { name: 'Retour' }).first().click();
+  await p.waitForTimeout(300);
+  await p.getByRole('tab', { name: /Progrès/ }).click().catch(async () => dclick('Progrès'));
+  await p.getByText('Tes observations').waitFor();
+  await dshot('25-demo-progres');
+  await p.mouse.wheel(0, 1400);
+  await p.waitForTimeout(400);
+  await dshot('26-demo-badges');
+  step('démo : progrès, observations, badges');
+  await p.getByRole('tab', { name: /Programme/ }).click().catch(async () => dclick('Programme'));
+  await p.getByText('Ton focus').first().waitFor();
+  await dshot('27-demo-programme');
+  step('démo : programme + focus personnalisé');
+  await dctx.close();
+}
 
 console.log('\nErreurs console/page :', errors.length ? '\n  ' + errors.join('\n  ') : 'aucune');
 await browser.close();

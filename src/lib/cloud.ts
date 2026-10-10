@@ -1,9 +1,10 @@
 // Façade « cloud » chargée à la demande (import dynamique → chunk séparé sur le web).
 // Le premier affichage n'attend jamais le code Supabase : l'app est utilisable avant même qu'il soit téléchargé.
 import type { AuthOutcome } from './auth';
+import type { LinkOutcome } from './orders';
 import type { SyncResult } from './sync';
 
-export type { AuthOutcome, SyncResult };
+export type { AuthOutcome, LinkOutcome, SyncResult };
 
 export const cloudConfigured = Boolean(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_KEY);
 
@@ -19,3 +20,4 @@ export const createAccount = (email: string, password: string) => load().then((m
 export const signIn = (email: string, password: string) => load().then((m) => m.signIn(email, password));
 export const signOut = () => load().then((m) => m.signOut());
 export const deleteAccount = () => load().then((m) => m.deleteAccount());
+export const linkOrder = (orderName: string, phone: string): Promise<LinkOutcome> => load().then((m) => m.linkOrder(orderName, phone));

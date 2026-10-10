@@ -48,7 +48,7 @@ export async function initAuth(): Promise<void> {
 
 /** Crée une session anonyme si aucune session n'existe. Silencieux en cas d'échec (mode local). */
 export async function ensureAnonymousSession(): Promise<void> {
-  if (!supabase) return;
+  if (!supabase || useApp.getState().demo) return;
   const { data } = await supabase.auth.getSession();
   if (data.session) return;
   const { data: signIn, error } = await supabase.auth.signInAnonymously();

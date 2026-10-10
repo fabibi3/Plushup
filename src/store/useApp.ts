@@ -5,7 +5,9 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { DateKey } from '@/lib/dates';
+import type { DemoData, LinkedOrder } from '@/lib/demo';
 import { mergeRemote, measurementKey } from '@/lib/mappers';
+import type { MilestoneId } from '@/lib/milestones';
 import type { CompletionMap, LogMap } from '@/lib/stats';
 import {
   CONSENT_VERSION,
@@ -53,6 +55,12 @@ type PersistedState = {
   completions: CompletionMap;
   lastPulledAt: string | null;
   lastSyncedAt: string | null;
+  /** Profil de démonstration : jamais synchronisé. */
+  demo: boolean;
+  seenMilestones: MilestoneId[];
+  linkedOrder: LinkedOrder | null;
+  /** Code de parrainage (suivi via UTM dans Shopify Analytics). */
+  referralCode: string;
 };
 
 type RuntimeState = {
@@ -87,6 +95,9 @@ type Actions = {
     profile: Profile | null;
     pulledAt: string;
   }) => void;
+  startDemo: (data: DemoData) => void;
+  markMilestoneSeen: (id: MilestoneId) => void;
+  setLinkedOrder: (order: LinkedOrder | null) => void;
   /** Changement de compte : tout le local repart vers le nouveau compte (fusion). */
   markAllDirty: () => void;
   resetAll: () => void;
@@ -105,6 +116,17 @@ const initialPersisted: PersistedState = {
   completions: {},
   lastPulledAt: null,
   lastSyncedAt: null,
+  demo: false,
+  seenMilestones: [],
+  linkedOrder: null,
+  referralCode: '',
+};
+
+const newReferralCode = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans 0/O/1/I (lisible à voix haute)
+  let code = 'PU';
+  for (let i = 0; i < 5; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return code;
 };
 
 const now = () => new Date().toISOString();
@@ -124,6 +146,7 @@ export const useApp = create<AppState>()(
           const at = now();
           return {
             profile: { ...profile, onboardedAt: at },
+            referralCode: s.referralCode || newReferralCode(),
             profileDirty: true,
             wellbeingConsent: true,
             pendingConsents: [
@@ -173,6 +196,25 @@ export const useApp = create<AppState>()(
           wellbeingConsent: kind === 'wellbeing_data' ? granted : s.wellbeingConsent,
           pendingConsents: [...s.pendingConsents, { kind, granted, version: CONSENT_VERSION, at: now() }],
         })),
+
+      startDemo: (data) =>
+        set((s) => ({
+          ...initialPersisted,
+          locale: s.locale, // la démo garde la langue choisie
+          demo: true,
+          profile: data.profile,
+          logs: data.logs,
+          completions: data.completions,
+          measurements: data.measurements,
+          linkedOrder: data.linkedOrder,
+          seenMilestones: data.seenMilestones,
+          wellbeingConsent: true,
+          referralCode: 'PUSALMA',
+        })),
+
+      markMilestoneSeen: (id) => set((s) => (s.seenMilestones.includes(id) ? {} : { seenMilestones: [...s.seenMilestones, id] })),
+
+      setLinkedOrder: (linkedOrder) => set({ linkedOrder }),
 
       setAccount: (account) => set({ account }),
       setSyncing: (syncing) => set({ syncing }),
@@ -249,6 +291,10 @@ export const useApp = create<AppState>()(
         completions: s.completions,
         lastPulledAt: s.lastPulledAt,
         lastSyncedAt: s.lastSyncedAt,
+        demo: s.demo,
+        seenMilestones: s.seenMilestones,
+        linkedOrder: s.linkedOrder,
+        referralCode: s.referralCode,
       }),
       onRehydrateStorage: () => () => {
         useApp.setState({ hydrated: true });
