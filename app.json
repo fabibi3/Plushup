@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "PlushUp",
+    "slug": "plushup",
+    "scheme": "plushup",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F5EF",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "co.plushup.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "co.plushup.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F4648",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "lang": "fr",
+      "name": "PlushUp",
+      "shortName": "PlushUp",
+      "description": "PlushUp — ta routine jambes légères, 30 secondes par jour.",
+      "themeColor": "#0F4648",
+      "backgroundColor": "#F7F5EF"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0F4648"
+        }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0F4648"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
