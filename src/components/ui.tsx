@@ -280,6 +280,8 @@ export function Field(props: TextInputProps & { label?: string }) {
       ) : null}
       <TextInput
         placeholderTextColor={colors.muted}
+        // Le libellé visible sert aussi de nom accessible (lecteurs d'écran, tests).
+        accessibilityLabel={rest.accessibilityLabel ?? label}
         {...rest}
         style={[styles.input, { fontFamily: fontFamily(locale, 'regular'), textAlign: locale === 'ar' ? 'right' : 'left' }, style]}
       />

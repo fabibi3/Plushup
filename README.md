@@ -37,18 +37,21 @@ puis « Découvrir avec un profil exemple ». Déroulé complet : **[docs/DEMO.m
 
 ---
 
-## 2. ⚠️ À faire une fois dans le dashboard Supabase (2 clics)
+## 2. ⚠️ Comptes : un e-mail est obligatoire
 
-Projet : https://supabase.com/dashboard/project/fjbrqsofnruqmqdprert
+Sans compte e-mail, on ne voit que l'écran de connexion (même en tapant `/moi` dans l'URL). Seul le **profil démo** y échappe.
+Une fois connectée, la session reste sur l'appareil : l'app s'ouvre et fonctionne hors ligne.
 
-1. **Authentication → Sign In / Providers → « Allow anonymous sign-ins » : ON.**
-   C'est ce qui permet la sauvegarde en ligne *sans rien demander* à l'utilisatrice.
-   Tant que c'est OFF, l'app reste en mode local (rien ne casse).
-2. **Authentication → URL Configuration** : ajoute `http://localhost:8081` aux *Redirect URLs*
-   (lien de confirmation d'e-mail en local).
-3. *(Optionnel en dev)* Authentication → Providers → Email → décocher « Confirm email »
-   pour tester la création de compte sans e-mail. ⚠️ Le SMTP par défaut de Supabase n'envoie
-   qu'aux membres de l'organisation : configure un SMTP (Resend, Brevo…) avant d'ouvrir à des testeuses.
+À régler une fois dans le dashboard Supabase — https://supabase.com/dashboard/project/fjbrqsofnruqmqdprert :
+
+1. **Authentication → URL Configuration → Redirect URLs** : ajoute `http://localhost:8081` (`npm run web`)
+   et `http://localhost:8080` (`npm run demo`), puis l'URL de prod (`https://app.plushup.co`).
+   C'est là que mène le lien de confirmation d'e-mail.
+2. **Qui peut créer un compte** : avec le SMTP par défaut de Supabase, seuls les **membres de l'organisation Supabase**
+   reçoivent l'e-mail de confirmation ; les autres adresses voient « Cette adresse e-mail n'est pas encore autorisée ».
+   Pour ouvrir à des testeuses : Authentication → **SMTP Settings** (Resend, Brevo…).
+3. *(Optionnel en dev)* Authentication → Providers → Email → décocher « Confirm email » : le compte est utilisable
+   immédiatement, sans e-mail. La connexion anonyme n'est **plus** utilisée.
 
 Ces réglages ne sont pas modifiables en SQL ni via le MCP, d'où cette étape manuelle.
 
@@ -99,7 +102,7 @@ src/
     stats.ts           Série, tendances, observations (pur, testé)
     mappers.ts         Local ⇄ base + fusion last-write-wins (pur, testé)
     sync.ts            Moteur de synchro (push dirty → pull delta)
-    auth.ts            Anonyme → conversion e-mail, déconnexion, suppression
+    auth.ts            Compte e-mail obligatoire : création, connexion, renvoi de confirmation, déconnexion, suppression
     cloud.ts           Façade chargée À LA DEMANDE (chunk séparé)
     *.native.ts        Variantes natives (haptique, rappels, polyfills)
   store/useApp.ts      Zustand + persistance AsyncStorage/localStorage
@@ -151,11 +154,11 @@ Charte des formulations santé : **[docs/WORDING.md](docs/WORDING.md)**.
 ## 6. Qualité
 
 - `npm run typecheck` : TypeScript strict + `noUncheckedIndexedAccess`, schéma DB typé (une colonne inexistante = erreur de compilation).
-- `npm test` : 32 tests (dates locales/DST, série, observations, fusion de synchro, badges, bilan, mise en scène de la démo…).
-- `npm run e2e` : 20 étapes sur la build web en viewport mobile — parcours réel (onboarding → consentement
-  obligatoire → check-in → célébrations → routine → série → programme → progrès → persistance → arabe RTL →
-  suppression) **et scénario de pitch** (démo → check-in → « 7 jours d'affilée » → bilan → commande → badges). Nécessite Chromium : `npx playwright install chromium`
-  ou `CHROMIUM_PATH=/chemin/vers/chrome`.
+- `npm test` : 44 tests (dates locales/DST, série, observations, fusion de synchro, badges, bilan, mise en scène de la démo, erreurs d'authentification…).
+- `npm run e2e` : 25 étapes sur la build web en viewport mobile, avec l'API d'authentification Supabase simulée —
+  compte obligatoire (`/moi` inaccessible sans compte), e-mail validé, adresse non autorisée, « vérifie ta boîte mail »,
+  connexion → onboarding → check-in → célébrations → routine → progrès → session conservée → arabe RTL →
+  suppression du compte, **et scénario de pitch** (démo → « 7 jours d'affilée » → bilan → commande → badges).
 - Bundles natifs iOS/Android vérifiés (`npx expo export --platform ios --platform android`).
 
 ### Poids (web, gzip)

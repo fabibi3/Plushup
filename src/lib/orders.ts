@@ -16,12 +16,8 @@ export async function linkOrder(orderName: string, phone: string): Promise<LinkO
   if (useApp.getState().demo) return 'ok';
   if (!supabase || !functionsUrl) return 'not_configured';
 
-  // Il faut une session (anonyme suffit) pour rattacher la commande à un compte.
-  let { data } = await supabase.auth.getSession();
-  if (!data.session) {
-    await supabase.auth.signInAnonymously().catch(() => null);
-    ({ data } = await supabase.auth.getSession());
-  }
+  // La commande est rattachée au compte e-mail connecté.
+  const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) return 'not_configured';
 

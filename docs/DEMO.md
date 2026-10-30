@@ -12,8 +12,8 @@
 
 | # | Écran | Geste | Ce que tu dis |
 |---|---|---|---|
-| 1 | Accueil | — | « Le legging gainant se vend sur Instagram. Le problème : après la livraison, la marque perd la cliente. PlushUp, c'est le legging **+ l'app qui la garde**. » |
-| 2 | Accueil | Toucher **« Découvrir avec un profil exemple »** | « Voici Salma, 29 ans, conseillère en centre d'appels à Casablanca, assise 9 h par jour. Elle a reçu son legging il y a 3 semaines. » |
+| 1 | Connexion | Montrer l'écran : un compte e-mail est obligatoire | « Le legging gainant se vend sur Instagram. Le problème : après la livraison, la marque perd la cliente. PlushUp, c'est le legging **+ l'app qui la garde**. » |
+| 2 | Connexion | Toucher **« Découvrir avec un profil exemple »** (sous le formulaire de compte) | « Voici Salma, 29 ans, conseillère en centre d'appels à Casablanca, assise 9 h par jour. Elle a reçu son legging il y a 3 semaines. » |
 | 3 | Aujourd'hui | Montrer la série de 6 jours | « Elle ouvre l'app tous les soirs. 6 jours d'affilée. » |
 | 4 | Check-in | **Faire mon check-in** → 😌 Légères → 6 h → L'après-midi → Enregistrer | « 30 secondes, 3 touches, sans rien taper : utilisable même sans savoir lire. » |
 | 5 | Célébration | 🔥 **7 jours d'affilée** apparaît | « C'est ce moment qui crée l'habitude… et le bouton **Partager sur WhatsApp** transforme chaque badge en publicité gratuite. » → *Continuer* |

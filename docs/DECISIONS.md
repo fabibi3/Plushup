@@ -20,10 +20,14 @@ Format : **Décision** · pourquoi · ce que j'ai rejeté · ce qui me ferait ch
 - **Rejeté** : PowerSync / WatermelonDB / ElectricSQL — excellents, mais surdimensionnés pour ~1 ligne/jour/utilisatrice.
 - **Limite assumée** : LWW au niveau de la ligne (pas du champ). Avec 1 check-in/jour et en général 1 téléphone, c'est le bon compromis.
 
-## D4. Compte anonyme d'abord, e-mail ensuite (conversion sans perte)
-- **Pourquoi** : la friction d'inscription tue l'activation. L'utilisatrice commence en 45 s ; une session anonyme Supabase sauvegarde ses données ; elle ajoute un e-mail plus tard → **même user_id**, rien n'est perdu.
-- **Rejeté pour la V0** : OTP téléphone/WhatsApp (la bonne cible au Maroc, mais nécessite Twilio/Meta + coûts) → **MVP**.
-- **Garde-fou** : sans Supabase ou sans anonymes activés → mode local, l'app marche.
+## D4. Compte e-mail obligatoire (révisé)
+- **Avant** : session anonyme automatique, e-mail facultatif. **Retour produit** : « n'importe qui peut avoir une version » — pas acceptable.
+- **Maintenant** : un compte e-mail est exigé avant tout écran de l'app (gardes `Stack.Protected` dans le layout racine) ; seul le profil démo y échappe.
+- **Ordre** : connexion → onboarding (6 écrans) → app. Sur un nouveau téléphone, la connexion récupère profil et historique **avant** d'afficher l'app : pas d'onboarding refait.
+- **Hors ligne** : le compte connecté est persisté, la session aussi ; l'app s'ouvre sans réseau une fois connectée.
+- **Téléphones partagés** : si un AUTRE e-mail se connecte sur un appareil qui garde des données locales, elles sont effacées au lieu d'être fusionnées (l'e-mail précédent est lu avant l'appel réseau, car Supabase émet SIGNED_IN avant de rendre la main).
+- **Erreurs lisibles** : adresse non autorisée (SMTP par défaut), limite d'envoi, adresse non confirmée (avec « Renvoyer l'e-mail ») — par code d'erreur, avec repli sur le message Supabase.
+- **Suite (MVP)** : OTP téléphone/WhatsApp, plus naturel au Maroc que l'e-mail.
 
 ## D5. Client Supabase « allégé » (auth-js + postgrest-js) chargé à la demande
 - **Pourquoi** : `@supabase/supabase-js` embarque Storage, Realtime, Functions… inutiles ici. En important seulement l'auth et PostgREST **et** en isolant tout le code cloud derrière un `import()` dynamique (`src/lib/cloud.ts`), le bundle initial web passe de **428 Ko → 358 Ko gzip (−16 %)** ; le reste (39 Ko) arrive après le premier affichage.
@@ -55,7 +59,7 @@ Format : **Décision** · pourquoi · ce que j'ai rejeté · ce qui me ferait ch
 ---
 
 ## D11. Mode démo déterministe, isolé du cloud
-- **Pourquoi** : une démo d'investisseurs ne doit dépendre ni du réseau ni du hasard. Données générées par un PRNG à graine fixe, **testées** (série de 6 jours, aucun badge en attente, célébration « 7 jours » au check-in, tendance à la baisse). Bandeau « Mode démo » toujours visible ; la synchro et la session anonyme sont désactivées.
+- **Pourquoi** : une démo d'investisseurs ne doit dépendre ni du réseau ni du hasard. Données générées par un PRNG à graine fixe, **testées** (série de 6 jours, aucun badge en attente, célébration « 7 jours » au check-in, tendance à la baisse). Bandeau « Mode démo » toujours visible ; accessible sans compte, la synchro est désactivée.
 
 ## D12. Badges calculés, pas stockés
 - Les badges sont dérivés des données (impossible de les désynchroniser) ; seule la liste des badges **déjà célébrés** est persistée. Célébration uniquement sur les onglets (jamais par-dessus un écran de saisie).

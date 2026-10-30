@@ -35,6 +35,8 @@ export default function RootLayout() {
   const hydrated = useApp((s) => s.hydrated);
   const locale = useApp((s) => s.locale);
   const onboarded = useApp((s) => s.profile.onboardedAt != null);
+  // Compte e-mail obligatoire : seul le profil démo (pitch, salons) y échappe.
+  const authed = useApp((s) => s.demo || s.account.mode === 'email');
   const fontsReady = useFontsFor(locale, hydrated);
   const [directionOk, setDirectionOk] = useState(false);
 
@@ -64,10 +66,13 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <WebFrame>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.cream }, animation: 'slide_from_right' }}>
-          <Stack.Protected guard={!onboarded}>
+          <Stack.Protected guard={!authed}>
+            <Stack.Screen name="bienvenue" />
+          </Stack.Protected>
+          <Stack.Protected guard={authed && !onboarded}>
             <Stack.Screen name="onboarding" />
           </Stack.Protected>
-          <Stack.Protected guard={onboarded}>
+          <Stack.Protected guard={authed && onboarded}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="checkin" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
             <Stack.Screen name="routine/[day]" options={{ gestureEnabled: false }} />
@@ -80,7 +85,7 @@ export default function RootLayout() {
             <Stack.Screen name="compte" />
             <Stack.Screen name="donnees" />
           </Stack.Protected>
-          {/* Toujours accessible (lien depuis l'onboarding). */}
+          {/* Toujours accessible (lien depuis l'écran de connexion). */}
           <Stack.Screen name="securite" />
         </Stack>
       </WebFrame>

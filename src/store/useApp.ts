@@ -61,11 +61,19 @@ type PersistedState = {
   linkedOrder: LinkedOrder | null;
   /** Code de parrainage (suivi via UTM dans Shopify Analytics). */
   referralCode: string;
+  /**
+   * Compte connecté, persisté : l'app s'ouvre directement (même hors ligne) pour une utilisatrice déjà connectée ;
+   * initAuth() le corrige au démarrage si la session a disparu.
+   */
+  account: Account;
+  /** Dernier e-mail connecté sur cet appareil : on ne mélange jamais les données de deux comptes. */
+  lastAccountEmail: string | null;
 };
+
+export type Account = { mode: AccountMode; email: string | null };
 
 type RuntimeState = {
   hydrated: boolean;
-  account: { mode: AccountMode; email: string | null };
   syncing: boolean;
 };
 
@@ -79,7 +87,7 @@ type Actions = {
   saveMeasurement: (date: DateKey, kind: MeasureKind, valueCm: number) => void;
   setConsent: (kind: ConsentKind, granted: boolean) => void;
   // --- synchro ---
-  setAccount: (account: RuntimeState['account']) => void;
+  setAccount: (account: Account) => void;
   setSyncing: (syncing: boolean) => void;
   markPushed: (snapshot: {
     logs: Record<string, string>;
@@ -120,6 +128,8 @@ const initialPersisted: PersistedState = {
   seenMilestones: [],
   linkedOrder: null,
   referralCode: '',
+  account: { mode: 'local', email: null },
+  lastAccountEmail: null,
 };
 
 const newReferralCode = () => {
@@ -136,7 +146,6 @@ export const useApp = create<AppState>()(
     (set) => ({
       ...initialPersisted,
       hydrated: false,
-      account: { mode: 'local', email: null },
       syncing: false,
 
       setLocale: (locale) => set((s) => ({ locale, profileDirty: s.profile.onboardedAt != null || s.profileDirty })),
@@ -216,7 +225,8 @@ export const useApp = create<AppState>()(
 
       setLinkedOrder: (linkedOrder) => set({ linkedOrder }),
 
-      setAccount: (account) => set({ account }),
+      setAccount: (account) =>
+        set((s) => ({ account, lastAccountEmail: account.mode === 'email' && account.email ? account.email : s.lastAccountEmail })),
       setSyncing: (syncing) => set({ syncing }),
 
       // On ne « nettoie » que les éléments inchangés depuis l'envoi (une modif pendant la synchro reste dirty).
@@ -274,7 +284,7 @@ export const useApp = create<AppState>()(
           lastPulledAt: null,
         })),
 
-      resetAll: () => set((s) => ({ ...initialPersisted, locale: s.locale, account: { mode: 'local', email: null } })),
+      resetAll: () => set((s) => ({ ...initialPersisted, locale: s.locale })),
     }),
     {
       name: 'plushup-v1',
@@ -295,6 +305,8 @@ export const useApp = create<AppState>()(
         seenMilestones: s.seenMilestones,
         linkedOrder: s.linkedOrder,
         referralCode: s.referralCode,
+        account: s.account,
+        lastAccountEmail: s.lastAccountEmail,
       }),
       onRehydrateStorage: () => () => {
         useApp.setState({ hydrated: true });

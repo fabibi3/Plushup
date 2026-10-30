@@ -14,8 +14,9 @@ export default function Moi() {
   const t = useT();
   const profile = useApp((s) => s.profile);
   const account = useApp((s) => s.account);
+  const demo = useApp((s) => s.demo);
 
-  const accountValue = account.mode === 'email' ? (account.email ?? t.account.modeShort.email) : t.account.modeShort[account.mode];
+  const accountValue = demo ? t.demo.banner : (account.email ?? '');
 
   return (
     <Screen>

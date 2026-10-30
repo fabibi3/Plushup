@@ -1,18 +1,16 @@
-// Onboarding en 7 écrans très courts (~45 s). Tout est facultatif sauf le consentement (exigence légale, données sensibles).
+// Onboarding (après création du compte) : 6 écrans très courts (~40 s).
+// Tout est facultatif sauf le consentement (exigence légale, données sensibles).
+// L'accueil, la langue et la démo sont sur l'écran de connexion (bienvenue.tsx).
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { LanguageSwitch } from '@/components/LanguageSwitch';
 import { Icon } from '@/components/Icon';
 import { Txt } from '@/components/Txt';
-import { WaveBand, WaveMark } from '@/components/Wave';
 import { Button, Card, Chip, ChipRow, Field, Header, Screen } from '@/components/ui';
 import { fmt, useT } from '@/i18n';
-import { ensureAnonymousSession } from '@/lib/cloud';
+import { requestSync } from '@/lib/cloud';
 import { REMINDER_TIMES } from '@/lib/constants';
-import { todayKey } from '@/lib/dates';
-import { generateDemoData } from '@/lib/demo';
 import { scheduleDailyReminder } from '@/lib/reminders';
 import type { ActivityProfile, Goal, LeggingSize } from '@/lib/types';
 import { useApp } from '@/store/useApp';
@@ -21,13 +19,14 @@ import { colors, radius, space } from '@/theme/tokens';
 const ACTIVITIES: ActivityProfile[] = ['seated', 'standing', 'active', 'mixed'];
 const GOALS: Goal[] = ['light_legs', 'comfort', 'silhouette', 'routine', 'confidence'];
 const SIZES: LeggingSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+// Étapes 1 → 6 (l'ancienne étape 0 « accueil » vit désormais sur l'écran de connexion).
+const FIRST = 1;
 const STEPS = 7;
 
 export default function Onboarding() {
   const t = useT();
   const completeOnboarding = useApp((s) => s.completeOnboarding);
-  const startDemo = useApp((s) => s.startDemo);
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(FIRST);
   const [firstName, setFirstName] = useState('');
   const [activity, setActivity] = useState<ActivityProfile | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -37,67 +36,36 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
 
   const next = () => setStep((s) => Math.min(STEPS - 1, s + 1));
-  const prev = () => setStep((s) => Math.max(0, s - 1));
+  const prev = () => setStep((s) => Math.max(FIRST, s - 1));
 
   const finish = async () => {
     if (!consent || busy) return;
     setBusy(true);
     completeOnboarding({ firstName: firstName.trim(), activityProfile: activity, goals, size, reminderTime: reminder });
-    // Non bloquants : rappel local (natif) + session anonyme pour la sauvegarde.
+    // Non bloquant : rappel local (natif). Le profil part vers le compte via la synchro.
     void scheduleDailyReminder(reminder, t.reminders).catch(() => {});
-    void ensureAnonymousSession();
+    requestSync(0);
     router.replace('/');
   };
 
   const isLast = step === STEPS - 1;
-
-  // Profil exemple (pitch, salons, tests) : 3 semaines d'historique, jamais synchronisé.
-  const openDemo = () => {
-    startDemo(generateDemoData(todayKey()));
-    router.replace('/');
-  };
 
   const footer = (
     <View style={{ gap: space.sm }}>
       {isLast ? (
         <Button label={t.onboarding.finish} onPress={finish} disabled={!consent} loading={busy} />
       ) : (
-        <Button label={step === 0 ? t.common.start : t.common.continue} onPress={next} />
+        <Button label={t.common.continue} onPress={next} />
       )}
-      {step === 0 ? <Button label={t.demo.cta} variant="ghost" small onPress={openDemo} /> : null}
-      {step > 0 ? (
-        <Txt variant="caption" color={colors.muted} center>
-          {fmt(t.onboarding.step, { n: step, total: STEPS - 1 })}
-        </Txt>
-      ) : null}
+      <Txt variant="caption" color={colors.muted} center>
+        {fmt(t.onboarding.step, { n: step, total: STEPS - 1 })}
+      </Txt>
     </View>
   );
 
   return (
     <Screen footer={footer} edges={['top']}>
-      {step > 0 ? <Header onBack={prev} /> : <View style={{ height: space.xl }} />}
-
-      {step === 0 && (
-        <View style={{ gap: space.xl }}>
-          <View style={{ alignItems: 'center', gap: space.lg, marginTop: space.xl }}>
-            <WaveMark size={88} />
-            <Txt variant="hero" center>
-              plushup
-            </Txt>
-          </View>
-          <Card tone="mint" style={{ paddingBottom: 0, overflow: 'hidden' }}>
-            <Txt variant="title">{t.onboarding.welcomeTitle}</Txt>
-            <Txt color={colors.muted}>{t.onboarding.welcomeBody}</Txt>
-            <WaveBand color={colors.mint} style={{ marginHorizontal: -space.lg, marginTop: space.sm }} />
-          </Card>
-          <View style={{ gap: space.sm }}>
-            <Txt variant="small" weight="semibold">
-              {t.onboarding.language}
-            </Txt>
-            <LanguageSwitch />
-          </View>
-        </View>
-      )}
+      {step > FIRST ? <Header onBack={prev} /> : <View style={{ height: space.xl }} />}
 
       {step === 1 && (
         <Question title={t.onboarding.nameTitle}>

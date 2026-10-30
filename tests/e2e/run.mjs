@@ -28,13 +28,100 @@ const shot = (n) => page.screenshot({ path: `${outDir}/${n}.png` });
 const click = async (text, opts = {}) => { await page.getByText(text, { exact: true, ...opts }).first().click(); await page.waitForTimeout(250); };
 const step = (s) => console.log('✓', s);
 
+// ---------------------------------------------------------------------------
+// Supabase Auth simulé (le conteneur de test n'a pas accès au réseau) : on rejoue les VRAIES réponses de l'API
+// pour chaque cas — adresse non autorisée, e-mail à confirmer, connexion réussie, suppression de compte.
+// ---------------------------------------------------------------------------
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const fakeJwt = (sub, email) =>
+  `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub, email, role: 'authenticated', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 86400 })}.sig`;
+const userOf = (email) => ({
+  id: '11111111-2222-3333-4444-555555555555',
+  aud: 'authenticated',
+  role: 'authenticated',
+  email,
+  email_confirmed_at: new Date().toISOString(),
+  app_metadata: { provider: 'email' },
+  user_metadata: {},
+  is_anonymous: false,
+  created_at: new Date().toISOString(),
+});
+const sessionOf = (email) => ({
+  access_token: fakeJwt('11111111-2222-3333-4444-555555555555', email),
+  token_type: 'bearer',
+  expires_in: 86400,
+  expires_at: Math.floor(Date.now() / 1000) + 86400,
+  refresh_token: 'refresh-e2e',
+  user: userOf(email),
+});
+let signupMode = 'not-authorized';
+// Comme l'API réelle : CORS ouvert, et l'en-tête de version fait lire le champ `code` des erreurs à auth-js.
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
+  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'access-control-expose-headers': 'x-supabase-api-version',
+};
+const preflight = (route) => (route.request().method() === 'OPTIONS' ? route.fulfill({ status: 200, headers: CORS }) : null);
+const json = (route, status, body) =>
+  route.fulfill({
+    status,
+    contentType: 'application/json',
+    headers: {
+      ...CORS,
+      'x-supabase-api-version': '2024-01-01',
+    },
+    body: JSON.stringify(body),
+  });
+await ctx.route('**/auth/v1/signup**', (route) => {
+  if (route.request().method() === 'OPTIONS') return preflight(route);
+  const email = JSON.parse(route.request().postData() ?? '{}').email;
+  if (signupMode === 'not-authorized') return json(route, 400, { code: 'email_address_not_authorized', message: 'Email address "inconnue@exemple.com" cannot be used as it is not authorized' });
+  return json(route, 200, userOf(email)); // confirmation d'adresse requise : utilisateur sans session
+});
+await ctx.route('**/auth/v1/token**', (route) => preflight(route) ?? json(route, 200, sessionOf(JSON.parse(route.request().postData() ?? '{}').email)));
+await ctx.route('**/auth/v1/user**', (route) => preflight(route) ?? json(route, 200, userOf('salma@plushup.co')));
+await ctx.route('**/auth/v1/logout**', (route) => preflight(route) ?? route.fulfill({ status: 204, headers: CORS }));
+await ctx.route('**/functions/v1/delete-account', (route) => preflight(route) ?? json(route, 200, { deleted: true }));
+
 const t0 = Date.now();
 await page.goto(base, { waitUntil: 'networkidle' });
-await page.getByText('Ta routine jambes légères').waitFor();
-step(`onboarding affiché (${Date.now() - t0} ms, réseau inclus)`);
+await page.getByText('Crée ton compte').waitFor();
+step(`écran de connexion affiché (${Date.now() - t0} ms, réseau inclus)`);
 await shot('01-welcome');
 
-await click('Commencer');
+// Sans compte, aucune page de l'app n'est accessible, même par l'URL.
+await page.goto(`${base}/moi`, { waitUntil: 'networkidle' });
+await page.getByText('Crée ton compte').waitFor();
+if (await page.getByText('Sauvegarde & compte').count()) throw new Error('/moi accessible sans compte');
+step('/moi inaccessible sans compte → retour à la connexion');
+
+const createBtn = page.getByRole('button', { name: 'Créer mon compte' });
+if (!(await createBtn.isDisabled())) throw new Error('Créer mon compte devrait être désactivé sans e-mail');
+await page.getByLabel('E-mail').fill('pas-un-email');
+await page.getByLabel('Mot de passe (8 caractères min.)').fill('motdepasse123');
+if (!(await createBtn.isDisabled())) throw new Error('Créer mon compte devrait refuser un e-mail invalide');
+step('e-mail obligatoire et validé');
+
+await page.getByLabel('E-mail').fill('inconnue@exemple.com');
+await createBtn.click();
+await page.getByText('Cette adresse e-mail n’est pas encore autorisée. Contacte l’équipe PlushUp.').waitFor();
+step('adresse non autorisée → message clair');
+
+signupMode = 'confirm';
+await page.getByLabel('E-mail').fill('salma@plushup.co');
+await page.getByLabel('Mot de passe (8 caractères min.)').fill('motdepasse123');
+await createBtn.click();
+await page.getByText(/Presque fini/).waitFor();
+await page.getByText('Renvoyer l’e-mail').waitFor();
+await shot('01b-check-email');
+step('création → « vérifie ta boîte mail », bascule en connexion');
+
+await page.getByLabel('Mot de passe (8 caractères min.)').fill('motdepasse123');
+await page.getByRole('button', { name: 'Me connecter' }).click();
+await page.getByPlaceholder('Ton prénom (facultatif)').waitFor();
+step('connexion → onboarding');
+
 await page.getByPlaceholder('Ton prénom (facultatif)').fill('Salma');
 await shot('02-name');
 await click('Continuer');
@@ -121,7 +208,7 @@ await page.waitForTimeout(300);
 await page.goto(base, { waitUntil: 'networkidle' });
 await page.getByText('Bonjour Salma').waitFor();
 await page.getByText('Check-in fait').waitFor();
-step('données conservées après rechargement (local-first)');
+step('session et données conservées après rechargement');
 
 // Passage en arabe (RTL).
 await page.getByRole('tab', { name: /Moi/ }).click().catch(async () => click('Moi'));
@@ -138,13 +225,13 @@ await page.getByRole('tab', { name: /حسابي/ }).click().catch(async () => cl
 await click('Français');
 await page.waitForTimeout(500);
 
-// Suppression des données (mode local, cloud injoignable) → retour à l'onboarding.
+// Suppression du compte (Edge Function simulée) → retour à l'écran de connexion.
 await click('Mes données');
 const dialogs = [];
 page.on('dialog', (d) => { dialogs.push(d.message()); void d.accept(); });
 await click('Supprimer mon compte et mes données');
-await page.getByText('Ta routine jambes légères').waitFor({ timeout: 15000 });
-step('suppression → retour onboarding · dialogues : ' + JSON.stringify(dialogs));
+await page.getByText('Crée ton compte').waitFor({ timeout: 15000 });
+step('suppression → retour à la connexion · dialogues : ' + JSON.stringify(dialogs));
 
 
 // ---------------------------------------------------------------------------
